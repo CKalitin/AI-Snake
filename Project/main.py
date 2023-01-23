@@ -54,9 +54,7 @@ class SnakeGame:
         pygame.draw.rect(self.screen, self.foodColor, pygame.Rect(self.foodPos.x * self.cellWidth, self.foodPos.y * self.cellHeight, self.cellWidth, self.cellHeight))
         
     def GameStep(self):
-        
-        if ai:
-            ai.GameStep()
+        if ai: ai.GameStep()
         
         self.RotateSnake()
         self.MoveSnake()
@@ -67,6 +65,8 @@ class SnakeGame:
         
         self.HandleFoodCollisions()
         self.HandleCollisions()
+        
+        self.stepsSinceReset += 1
 
     def GameLoop(self):
         while self.running:
@@ -85,6 +85,8 @@ class SnakeGame:
             pygame.display.update()
 
     def ResetGame(self):
+        if (ai): ai.GameReset()
+        
         self.snakePos = [ Point(random.randrange(0, self.cols), random.randrange(0, self.rows)) ]
         self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
         self.snakeDirection = Point(1, 0)
@@ -125,7 +127,7 @@ class SnakeGame:
                 self.foodEaten = False
                 
     def HandleCollisions(self):
-        if (self.snakePos[0].x < 0 or self.snakePos[0].x > 20 or self.snakePos[0].y < 0 or self.snakePos[0].y > 20):
+        if (self.snakePos[0].x < 0 or self.snakePos[0].x > self.cols or self.snakePos[0].y < 0 or self.snakePos[0].y > self.rows):
             self.ResetGame()
 
         for i in range(self.snakePos.__len__()):
@@ -136,6 +138,7 @@ class SnakeGame:
         if (self.snakePos[0] == self.foodPos):
             self.SpawnFood()
             self.foodEaten = True
+            if (ai): ai.FoodEaten()
 
     def SpawnFood(self):
         self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
@@ -170,8 +173,63 @@ class SnakeGame:
 class SnakeAI:
     reward = 0
     
-    def GameStep():
-        pass
+    foodDir = [False, False, False, False] # Up, Left, Down, Right / WASD
+    dangerDir = [False, False, False] # Forward, Right, Left
+    
+    def Reset(self):
+        self.reward = 0
+    
+    def GameStep(self):
+        # If snake has done nothing for 100 game steps
+        if game.stepsSinceReset > 100*len(game.snakePos):
+            game.ResetGame()
+            
+    def GameReset(self):
+        reward -= 10
+        
+    def FoodEaten(self):
+        reward += 10
+        
+    def GetDangerDirection(self):
+        self.dangerDir = [False, False, False]
+    
+        forwardPos = game.snakePos[0] + game.snakeDirection
+        rightPos = game.snakePos[0] + self.GetSnakeLocalDir(1)
+        leftPos = game.snakePos[0] + self.GetSnakeLocalDir(2)
+        
+        # Borders
+        if (forwardPos.x < 0 or forwardPos.x > game.cols or forwardPos.y < 0 or forwardPos.y > game.rows): self.dangerDir[0] = True
+        if (rightPos.x < 0 or rightPos.x > game.cols or rightPos.y < 0 or rightPos.y > game.rows): self.dangerDir[1] = True
+        if (leftPos.x < 0 or leftPos.x > game.cols or leftPos.y < 0 or leftPos.y > game.rows): self.dangerDir[2] = True
+        
+        # Snake
+        for i in range(len(game.snakePos)):
+            if forwardPos == game.snakePos[i]: self.dangerDir[0] = True
+            if rightPos == game.snakePos[i]: self.dangerDir[1] = True
+            if leftPos == game.snakePos[i]: self.dangerDir[2] = True
+        
+    def GetFoodDirection(self):
+        self.foodDir = [False, False, False, False]
+        
+        self.foodDir[0] = self.foodPos.y > self.snakePos[0].y
+        self.foodDir[1] = self.foodPos.x < self.snakePos[0].x
+        self.foodDir[2] = self.foodPos.y < self.snakePos[0].y
+        self.foodDir[3] = self.foodPos.x > self.snakePos[0].x
+    
+    def LocalDirtoGameDir(self, localDir):
+        # Local Direction (Forward, Right, Left) to Game Direction
+        if localDir == 0:
+            return game.snakeDirection
+        elif localDir == 1:
+            if game.snakeDirection == Point(0, 1): return Point(1,0)
+            elif game.snakeDirection == Point(0, -1): return Point(-1, 0)
+            elif game.snakeDirection == Point(1, 0): return Point(0, -1)
+            elif game.snakeDirection == Point(-1, 0): return Point(0, 1)
+        elif localDir == 2:
+            if game.snakeDirection == Point(0, 1): return Point(-1,0)
+            elif game.snakeDirection == Point(0, -1): return Point(1, 0)
+            elif game.snakeDirection == Point(1, 0): return Point(0, 1)
+            elif game.snakeDirection == Point(-1, 0): return Point(0, -1)
     
 if __name__ == '__main__':
     game = SnakeGame()
