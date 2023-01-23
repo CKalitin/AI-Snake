@@ -5,6 +5,7 @@ import random
 Point = namedtuple('Point', 'x, y')
 
 game = None
+ai = None
 
 class SnakeGame:
     playerControlled = True
@@ -13,6 +14,8 @@ class SnakeGame:
     deltaTime = 0.0
     targetFps = 60
     running = True
+
+    stepsSinceReset = 0
 
     movementInput = [False, False, False, False] # WASD
 
@@ -51,8 +54,9 @@ class SnakeGame:
         pygame.draw.rect(self.screen, self.foodColor, pygame.Rect(self.foodPos.x * self.cellWidth, self.foodPos.y * self.cellHeight, self.cellWidth, self.cellHeight))
         
     def GameStep(self):
-        self.HandleFoodCollisions()
-        self.HandleCollisions()
+        
+        if ai:
+            ai.GameStep()
         
         self.RotateSnake()
         self.MoveSnake()
@@ -60,6 +64,9 @@ class SnakeGame:
         self.RenderCells()
 
         self.DisplayScoreText()
+        
+        self.HandleFoodCollisions()
+        self.HandleCollisions()
 
     def GameLoop(self):
         while self.running:
@@ -81,6 +88,7 @@ class SnakeGame:
         self.snakePos = [ Point(random.randrange(0, self.cols), random.randrange(0, self.rows)) ]
         self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
         self.snakeDirection = Point(1, 0)
+        self.stepsSinceReset = 0
         
     def HandlePygameEvents(self):
         self.movementInput = [False, False, False, False]
@@ -161,6 +169,9 @@ class SnakeGame:
 
 class SnakeAI:
     reward = 0
+    
+    def GameStep():
+        pass
     
 if __name__ == '__main__':
     game = SnakeGame()
