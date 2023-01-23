@@ -1,41 +1,44 @@
-import time
 import pygame
 import random
-import math
+
+# How To Improve This:
+# 1. Make it a class
+# 2. instead of (0,0) have a struct/class for Vector2s/Points (namedTuple)
 
 #region Variables
 
+playerControlled = True
+useHardCodedAI = False
+
 deltaTime = 0.0
 targetFps = 60
+running = True
+
+movementInput = [False, False, False, False] # WASD
+
+#endregion
+
+#region Game Variables
 
 rows, cols = (20, 20)
 
 cellWidth = 24
 cellHeight = 24
 
-cellTypes = [
-    (0,100,0), # Background
-    (0, 100, 255), # Snake
-    (255, 50, 0), # Food
-]
-
 snakeColor = (0, 255, 50)
 foodColor = (255, 50, 0)
 
 snakePos = [ (random.randrange(0, cols), random.randrange(0, rows)) ]
-
 foodPos = (random.randint(0, cols), random.randint(0, rows))
+
+while foodPos == snakePos[0]:
+    (random.randint(0, cols), random.randint(0, rows))
 
 snakeDirection = (1, 0)
 snakeMoveSpeed = 7
 snakeMovementAmount = 0
 
-while foodPos == snakePos[0]:
-    (random.randint(0, cols), random.randint(0, rows))
-
 foodEaten = False
-
-scoreTextPos = (10, 10)
 
 #endregion
 
@@ -47,9 +50,7 @@ screen = pygame.display.set_mode(((cols + 1) * cellWidth, (rows + 1) * cellHeigh
 
 pygame.display.set_caption("AI Snake")
 
-t0 = time.time()
 font = pygame.font.SysFont("data/Motorblock.tff", 24)
-print('time needed for Font creation :', time.time()-t0)
 
 #endregion
 
@@ -63,7 +64,7 @@ def RenderCells():
 
 #endregion
 
-#region Player Functions
+#region Movement Functions
 
 def RotateSnake(w, a, s, d):
     global snakeDirection
@@ -97,6 +98,10 @@ def MoveSnake():
         else:
             foodEaten = False
 
+#endregion
+
+#region Collisions and Food
+
 def HandleWallCollisions():
     if (snakePos[0][0] < 0 or snakePos[0][0] > 20 or snakePos[0][1] < 0 or snakePos[0][1] > 20):
         ResetGame()
@@ -111,17 +116,22 @@ def HandleFoodCollisions():
     global foodPos
     
     if (snakePos[0] == foodPos):
-        foodPos = (random.randint(0, cols), random.randint(0, rows))
+        SpawnFood()
         foodEaten = True
 
-def ResetGame():
-    global snakePos
+def SpawnFood():
     global foodPos
-    global snakeDirection
     
-    snakePos = [ (random.randrange(0, cols), random.randrange(0, rows)) ]
     foodPos = (random.randint(0, cols), random.randint(0, rows))
-    snakeDirection = (1, 0)
+    while CheckFoodInSnake():
+        foodPos = (random.randint(0, cols), random.randint(0, rows))
+
+def CheckFoodInSnake():
+    for i in range(snakePos.__len__()):
+        if (snakePos[i] == foodPos):
+            return True
+    return False
+
 
 #endregion
 
@@ -132,35 +142,82 @@ def DisplayGUI():
 
 def ScoreText():
     scoreText = font.render(f"Score: {snakePos.__len__() - 1}", True, (255,255,255))
-    screen.blit(scoreText, (scoreTextPos[0], scoreTextPos[1]))
+    screen.blit(scoreText, (10, 10))
 
 #endregion
 
-running = True
-while running:
-    input = [False, False, False, False] # WASD
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if (event.type == pygame.KEYDOWN):
-            if (event.key == pygame.K_w): input[0] = True
-            if (event.key == pygame.K_a): input[1] = True
-            if (event.key == pygame.K_s): input[2] = True
-            if (event.key == pygame.K_d): input[3] = True
-            
-    screen.fill((0, 0, 0))
+#region Basic AI
 
-    deltaTime = pygame.time.Clock().tick(targetFps) / 1000
+def SetMovementInputTowardsFood():
+    global movementInput
     
+    foodUp = foodPos[1] > snakePos[0][1]
+    foodDown = foodPos[1] < snakePos[0][1]
+    foodLeft = foodPos[0] < snakePos[0][0]
+    foodRight = foodPos[0] > snakePos[0][0]
+    
+    if foodUp and snakeDirection != (0, 1):
+        movementInput = [False, False, True, False]
+    elif foodDown and snakeDirection != (0, -1):
+        movementInput = [True, False, False, False]
+    elif foodLeft and snakeDirection != (-1, 0):
+        movementInput = [False, True, False, False]
+    elif foodRight and snakeDirection != (1, 0):
+        movementInput = [False, False, False, True]
+
+#endregion
+
+#region Game
+
+def GameStep():
     HandleFoodCollisions()
     HandleWallCollisions()
     HandleSnakeCollisions()
     
-    RotateSnake(input[0], input[1], input[2], input[3])
+    RotateSnake(movementInput[0], movementInput[1], movementInput[2], movementInput[3])
     MoveSnake()
     
     RenderCells()
 
     DisplayGUI()
+
+def ResetGame():
+    global snakePos
+    global foodPos
+    global snakeDirection
+    
+    snakePos = [ (random.randrange(0, cols), random.randrange(0, rows)) ]
+    foodPos = (random.randint(0, cols), random.randint(0, rows))
+    snakeDirection = (1, 0)
+
+def HandlePygameEvents():
+    global running
+    global movementInput
+    
+    movementInput = [False, False, False, False]
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if (event.type == pygame.KEYDOWN and playerControlled):
+            if (event.key == pygame.K_w): movementInput[0] = True
+            if (event.key == pygame.K_a): movementInput[1] = True
+            if (event.key == pygame.K_s): movementInput[2] = True
+            if (event.key == pygame.K_d): movementInput[3] = True
+
+#endregion
+
+while running:
+    HandlePygameEvents()
+    
+    screen.fill((0, 0, 0))
+
+    if playerControlled: deltaTime = pygame.time.Clock().tick(targetFps) / 1000
+    else:  deltaTime = 1
+    
+    if useHardCodedAI and playerControlled:
+        SetMovementInputTowardsFood()
+        
+    GameStep()
 
     pygame.display.update()
