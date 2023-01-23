@@ -3,6 +3,10 @@ import random
 import numpy as np
 from collections import deque
 import snake_game
+from snake_game import SnakeAI, Point
+import model
+from helper import plot
+import time
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
@@ -20,17 +24,26 @@ class Agent:
         
         self.numGames = 0
         self.epsilon = 0 # Randomness
-        self.gamma = 0 # Discount rate
+        self.gamma = 0.9 # Discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft() on max memory
-        self.model = None # TODO
-        self.trainer = None # TODO
-        # TODO: model, trainer
+        self.model = model.Linear_QNET(11, 256, 3)
+        self.trainer = model.QTrainer(self.model, lr=LR, gamma=self.gamma)
     
     def playStep(self, action):
+        self.setSnakeMovementInput(action)
         self.game.GameStep()
-        return self.ai.reward, self.ai.gameWasReset, self.game.snakePos.__len__ - 1
+        self.game.GameLoopStep()
+        return self.ai.reward, self.ai.gameWasReset, self.ai.score
     
-    def getState(self, game):
+    def setSnakeMovementInput(self, action):
+        self.game.movementInput = [False, False, False, False]
+        movementInput = self.ai.LocalDirtoGameDir(action.index(max(action)))
+        if movementInput == Point(0, -1): self.game.movementInput[0] = True
+        if movementInput == Point(-1, 0): self.game.movementInput[1] = True
+        if movementInput == Point(0, 1): self.game.movementInput[2] = True
+        if movementInput == Point(1, 0): self.game.movementInput[3] = True
+    
+    def getState(self):
         state = [
             (self.ai.dangerDir[0]), # Danger straight
             (self.ai.dangerDir[1]), # Danger right
@@ -64,7 +77,7 @@ class Agent:
     def getAction(self, state):
         # Random moves (Tradeoff between exploration / exploitation)
         # Chance of random move starts at 40%, then goes to 0 over 80 moves. Because of (0, 200 < 80)
-        self.epsilon = 80 - self.numGames
+        self.epsilon = 150 - self.numGames
         finalMove = [0,0,0]
         
         if (random.randint(0, 200) < self.epsilon):
@@ -72,8 +85,9 @@ class Agent:
             finalMove[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
-            prediciton = self.model.predict(state0)
+            prediciton = self.model(state0)
             move = torch.argmax(prediciton).item()
+            #print('Predition', prediciton, 'Argmax', move)
             finalMove[move] = 1
         
         return finalMove
@@ -84,40 +98,49 @@ def train():
     totalScore = 0
     recordScore = 0
     agent = Agent()
-    game = snake_game.SnakeGame()
+    ai = snake_game.SnakeAI()
+    game = snake_game.SnakeGame(False)
+    agent.ai = ai
+    agent.game = game
+    snake_game.game = game
+    snake_game.ai = ai
     
-    while (True):
+    while game.running:
+        #time.sleep(0.1)
+        
         # get old state
-        stateOld = agent.getState(game)
+        stateOld = agent.getState()
         
         # Get new move
         finalMove = agent.getAction(stateOld)
         
         # Perform move and get new state
         reward, done, score = agent.playStep(finalMove)
-        stateNew = agent.getState(game)
+        stateNew = agent.getState()
         
         agent.trainShortMemory(stateOld, finalMove, reward, stateNew, done)
         
         # Remember
         agent.remember(stateOld, finalMove, reward, stateNew, done)
-        
         if done:
             # Train long memory, plot result
-            snake_game.ai.Reset()
-            
             agent.numGames += 1
             agent.trainLongMemory()
             
             if score > recordScore:
                 recordScore = score
-                #agent.model.save()
+                agent.model.save()
             
-            print('Game', agent.numGames, 'Score', score, 'Record', recordScore)
-            # TODO: Plot
+            print('Game', agent.numGames, 'Score', score, 'Record', recordScore, 'Reward', ai.reward)
+            
+            snake_game.ai.Reset()
+            
+            plotScores.append(score)
+            totalScore += score
+            meanScore = totalScore / agent.numGames
+            plotMeanScores.append(meanScore)
+            plot(plotScores, plotMeanScores)
             
             
-            
-
 if __name__ == '__main__':
     train()

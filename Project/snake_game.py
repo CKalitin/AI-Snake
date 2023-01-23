@@ -36,16 +36,17 @@ class SnakeGame:
 
     foodEaten = False
     
-    def __init__(self):
+    def __init__(self, playerControlled):
         pygame.init()
         self.screen = pygame.display.set_mode(((self.cols + 1) * self.cellWidth, (self.rows + 1) * self.cellHeight))
         pygame.display.set_caption("AI Snake")
         self.font = pygame.font.SysFont("data/Motorblock.tff", 30)
         
+        self.playerControlled = playerControlled
+        
         self.ResetGame()
         
-        if self.playerControlled:
-            self.GameLoop()
+        if self.playerControlled: self.GameLoop()
             
     def RenderCells(self):
         for i in range(len(self.snakePos)):
@@ -54,35 +55,38 @@ class SnakeGame:
         pygame.draw.rect(self.screen, self.foodColor, pygame.Rect(self.foodPos.x * self.cellWidth, self.foodPos.y * self.cellHeight, self.cellWidth, self.cellHeight))
         
     def GameStep(self):
-        if ai: ai.GameStep()
-        
         self.RotateSnake()
         self.MoveSnake()
-        
-        self.RenderCells()
-
-        self.DisplayScoreText()
         
         self.HandleFoodCollisions()
         self.HandleCollisions()
         
         self.stepsSinceReset += 1
+        
+        if ai: ai.GameStep()
 
     def GameLoop(self):
         while self.running:
-            self.HandlePygameEvents()
-            
-            self.screen.fill((0, 0, 0))
+            self.GameLoopStep()
 
-            if self.playerControlled: self.deltaTime = pygame.time.Clock().tick(self.targetFps) / 1000
-            else:  self.deltaTime = 1
+    def GameLoopStep(self):
+        self.HandlePygameEvents()
             
-            if self.useHardCodedAI and self.playerControlled:
-                self.SetMovementInputTowardsFood()
-                
-            self.GameStep()
+        self.screen.fill((0, 0, 0))
+        
+        self.RenderCells()
 
-            pygame.display.update()
+        self.DisplayScoreText()
+        
+        #self.deltaTime = pygame.time.Clock().tick(self.targetFps) / 1000
+        if self.playerControlled: self.deltaTime = pygame.time.Clock().tick(self.targetFps) / 1000
+        else:  self.deltaTime = 1
+        
+        if self.useHardCodedAI and self.playerControlled: self.SetMovementInputTowardsFood()
+        if self.playerControlled: self.GameStep()
+
+        pygame.display.update()
+        
 
     def ResetGame(self):
         if (ai): ai.GameReset()
@@ -93,7 +97,7 @@ class SnakeGame:
         self.stepsSinceReset = 0
         
     def HandlePygameEvents(self):
-        self.movementInput = [False, False, False, False]
+        if self.playerControlled: self.movementInput = [False, False, False, False]
         
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -112,7 +116,7 @@ class SnakeGame:
         if self.movementInput[2]: self.snakeDirection = Point(0, 1)
         if self.movementInput[3]: self.snakeDirection = Point(1, 0)
         
-        if self.snakePos.__len__() > 1 and (self.snakePos[0].x + self.snakeDirection.x, self.snakePos[0].y + self.snakeDirection.y) == self.snakePos[1]:
+        if len(self.snakePos) > 1 and (self.snakePos[0].x + self.snakeDirection.x, self.snakePos[0].y + self.snakeDirection.y) == self.snakePos[1]:
             self.snakeDirection = previousDirection
 
     def MoveSnake(self):
@@ -122,7 +126,7 @@ class SnakeGame:
             self.snakeMovementAmount = 0
             self.snakePos.insert(0, Point(self.snakePos[0].x + self.snakeDirection.x, self.snakePos[0].y + self.snakeDirection.y))
             if (self.foodEaten == False):
-                self.snakePos.pop(self.snakePos.__len__() - 1)
+                self.snakePos.pop(len(self.snakePos) - 1)
             else:
                 self.foodEaten = False
                 
@@ -130,8 +134,8 @@ class SnakeGame:
         if (self.snakePos[0].x < 0 or self.snakePos[0].x > self.cols or self.snakePos[0].y < 0 or self.snakePos[0].y > self.rows):
             self.ResetGame()
 
-        for i in range(self.snakePos.__len__()):
-            if i != 0 and i < self.snakePos.__len__() and self.snakePos[0] == self.snakePos[i]:
+        for i in range(len(self.snakePos)):
+            if i != 0 and i < len(self.snakePos) and self.snakePos[0] == self.snakePos[i]:
                 self.ResetGame()
                 
     def HandleFoodCollisions(self):
@@ -146,13 +150,13 @@ class SnakeGame:
             self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
             
     def CheckFoodInSnake(self):
-        for i in range(self.snakePos.__len__()):
+        for i in range(len(self.snakePos)):
             if (self.snakePos[i] == self.foodPos):
                 return True
         return False
 
     def DisplayScoreText(self):
-        scoreText = self.font.render(f"Score: {self.snakePos.__len__() - 1}", True, (255,255,255))
+        scoreText = self.font.render(f"Score: {len(self.snakePos) - 1}", True, (255,255,255))
         self.screen.blit(scoreText, (10, 10))
         
     def SetMovementInputTowardsFood(self):
@@ -172,6 +176,7 @@ class SnakeGame:
 
 class SnakeAI:
     reward = 0
+    score = 0
     gameWasReset = False
     
     foodDir = [False, False, False, False] # Up, Left, Down, Right / WASD
@@ -179,12 +184,16 @@ class SnakeAI:
     
     def Reset(self):
         self.reward = 0
+        self.score = 0
         self.gameWasReset = False
     
     def GameStep(self):
         # If snake has done nothing for 100 game steps
         if game.stepsSinceReset > 100*len(game.snakePos):
             game.ResetGame()
+
+        if len(game.snakePos) > 1:
+            self.score = len(game.snakePos) - 1
 
         self.GetDangerDirection()
         self.GetFoodDirection()
@@ -200,8 +209,13 @@ class SnakeAI:
         self.dangerDir = [False, False, False]
     
         forwardPos = game.snakePos[0] + game.snakeDirection
-        rightPos = game.snakePos[0] + self.GetSnakeLocalDir(1)
-        leftPos = game.snakePos[0] + self.GetSnakeLocalDir(2)
+        rightPos = game.snakePos[0] + self.LocalDirtoGameDir(1)
+        leftPos = game.snakePos[0] + self.LocalDirtoGameDir(2)
+        
+        # Convert to Point
+        forwardPos = Point(forwardPos[0], forwardPos[1])
+        rightPos = Point(rightPos[0], rightPos[1])
+        leftPos = Point(leftPos[0], leftPos[1])
         
         # Borders
         if (forwardPos.x < 0 or forwardPos.x > game.cols or forwardPos.y < 0 or forwardPos.y > game.rows): self.dangerDir[0] = True
@@ -217,10 +231,10 @@ class SnakeAI:
     def GetFoodDirection(self):
         self.foodDir = [False, False, False, False]
         
-        self.foodDir[0] = self.foodPos.y > self.snakePos[0].y
-        self.foodDir[1] = self.foodPos.x < self.snakePos[0].x
-        self.foodDir[2] = self.foodPos.y < self.snakePos[0].y
-        self.foodDir[3] = self.foodPos.x > self.snakePos[0].x
+        self.foodDir[0] = game.foodPos.y > game.snakePos[0].y
+        self.foodDir[1] = game.foodPos.x < game.snakePos[0].x
+        self.foodDir[2] = game.foodPos.y < game.snakePos[0].y
+        self.foodDir[3] = game.foodPos.x > game.snakePos[0].x
     
     def LocalDirtoGameDir(self, localDir):
         # Local Direction (Forward, Right, Left) to Game Direction
@@ -238,4 +252,4 @@ class SnakeAI:
             elif game.snakeDirection == Point(-1, 0): return Point(0, -1)
     
 if __name__ == '__main__':
-    game = SnakeGame()
+    game = SnakeGame(True)
