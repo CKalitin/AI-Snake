@@ -19,7 +19,7 @@ class SnakeGame:
 
     movementInput = [False, False, False, False] # WASD
 
-    rows, cols = (20, 20)
+    rows, cols = (15, 15)
 
     cellWidth = 24
     cellHeight = 24
@@ -40,7 +40,7 @@ class SnakeGame:
         pygame.init()
         self.screen = pygame.display.set_mode(((self.cols + 1) * self.cellWidth, (self.rows + 1) * self.cellHeight))
         pygame.display.set_caption("AI Snake")
-        self.font = pygame.font.SysFont("data/Motorblock.tff", 24)
+        self.font = pygame.font.SysFont("data/Motorblock.tff", 30)
         
         self.ResetGame()
         
@@ -172,23 +172,29 @@ class SnakeGame:
 
 class SnakeAI:
     reward = 0
+    gameWasReset = False
     
     foodDir = [False, False, False, False] # Up, Left, Down, Right / WASD
     dangerDir = [False, False, False] # Forward, Right, Left
     
     def Reset(self):
         self.reward = 0
+        self.gameWasReset = False
     
     def GameStep(self):
         # If snake has done nothing for 100 game steps
         if game.stepsSinceReset > 100*len(game.snakePos):
             game.ResetGame()
+
+        self.GetDangerDirection()
+        self.GetFoodDirection()
             
     def GameReset(self):
-        reward -= 10
+        self.reward -= 10
+        self.gameWasReset = True
         
     def FoodEaten(self):
-        reward += 10
+        self.reward += 10
         
     def GetDangerDirection(self):
         self.dangerDir = [False, False, False]
