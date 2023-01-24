@@ -4,6 +4,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 import os
 
+# https://github.com/patrickloeber/snake-ai-pytorch
+
 class Linear_QNET(nn.Module):
     def __init__(self, inputSize, hiddenSize, outputSize):
         super().__init__()
@@ -19,6 +21,7 @@ class Linear_QNET(nn.Module):
         modelFolderPath = './model'
         if not os.path.exists(modelFolderPath):
             os.makedirs(modelFolderPath)
+            
         fileName = os.path.join(modelFolderPath, fileName)
         torch.save(self.state_dict(), fileName)
         
@@ -52,7 +55,8 @@ class QTrainer:
             Qnew = reward[idx]
             if not done[idx]:
                 Qnew = reward[idx] + self.gamma * torch.max(self.model(nextState[idx]))
-            target[idx][torch.argmax(action).item()] = Qnew
+                
+            target[idx][torch.argmax(action[idx]).item()] = Qnew
             
         # 2: Qnew = r + y * max(nextPredicted Q value) -> only do this if not done
         self.optimizer.zero_grad()

@@ -3,10 +3,12 @@ import random
 import numpy as np
 from collections import deque
 import snake_game
-from snake_game import SnakeAI, Point
+from snake_game import SnakeGame, SnakeAI, Point
 import model
 from helper import plot
 import time
+
+# https://github.com/patrickloeber/snake-ai-pytorch
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
@@ -19,9 +21,6 @@ class Agent:
     ai = None
     
     def __init__(self):
-        self.game = snake_game.game
-        self.ai = snake_game.ai
-        
         self.numGames = 0
         self.epsilon = 0 # Randomness
         self.gamma = 0.9 # Discount rate
@@ -77,7 +76,7 @@ class Agent:
     def getAction(self, state):
         # Random moves (Tradeoff between exploration / exploitation)
         # Chance of random move starts at 40%, then goes to 0 over 80 moves. Because of (0, 200 < 80)
-        self.epsilon = 150 - self.numGames
+        self.epsilon = 80 - self.numGames
         finalMove = [0,0,0]
         
         if (random.randint(0, 200) < self.epsilon):
@@ -87,26 +86,28 @@ class Agent:
             state0 = torch.tensor(state, dtype=torch.float)
             prediciton = self.model(state0)
             move = torch.argmax(prediciton).item()
-            #print('Predition', prediciton, 'Argmax', move)
             finalMove[move] = 1
         
         return finalMove
     
 def train():
+    global agent
+    
     plotScores = []
     plotMeanScores = []
     totalScore = 0
     recordScore = 0
+    
     agent = Agent()
-    ai = snake_game.SnakeAI()
-    game = snake_game.SnakeGame(False)
-    agent.ai = ai
+    ai = SnakeAI()
+    game = SnakeGame(False)
     agent.game = game
+    agent.ai = ai
     snake_game.game = game
     snake_game.ai = ai
     
     while game.running:
-        #time.sleep(0.1)
+        #time.sleep(0.0033)
         
         # get old state
         stateOld = agent.getState()

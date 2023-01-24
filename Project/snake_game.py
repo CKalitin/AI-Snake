@@ -19,10 +19,10 @@ class SnakeGame:
 
     movementInput = [False, False, False, False] # WASD
 
-    rows, cols = (15, 15)
+    rows, cols = (20, 20)
 
-    cellWidth = 24
-    cellHeight = 24
+    cellWidth = 16
+    cellHeight = 16
 
     snakeColor = (0, 255, 50)
     foodColor = (255, 50, 0)
@@ -92,6 +92,8 @@ class SnakeGame:
         if (ai): ai.GameReset()
         
         self.snakePos = [ Point(random.randrange(0, self.cols), random.randrange(0, self.rows)) ]
+        self.snakePos.append(Point(self.snakePos[0].x - 1, self.snakePos[0].y))
+        self.snakePos.append(Point(self.snakePos[0].x - 2, self.snakePos[0].y))
         self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
         self.snakeDirection = Point(1, 0)
         self.stepsSinceReset = 0
@@ -156,7 +158,7 @@ class SnakeGame:
         return False
 
     def DisplayScoreText(self):
-        scoreText = self.font.render(f"Score: {len(self.snakePos) - 1}", True, (255,255,255))
+        scoreText = self.font.render(f"Score: {len(self.snakePos) - 3}", True, (255,255,255))
         self.screen.blit(scoreText, (10, 10))
         
     def SetMovementInputTowardsFood(self):
@@ -192,8 +194,8 @@ class SnakeAI:
         if game.stepsSinceReset > 100*len(game.snakePos):
             game.ResetGame()
 
-        if len(game.snakePos) > 1:
-            self.score = len(game.snakePos) - 1
+        if len(game.snakePos) > 3:
+            self.score = len(game.snakePos) - 3
 
         self.GetDangerDirection()
         self.GetFoodDirection()
@@ -203,25 +205,21 @@ class SnakeAI:
         self.gameWasReset = True
         
     def FoodEaten(self):
-        self.reward += 10
+        self.reward += 15
         
     def GetDangerDirection(self):
         self.dangerDir = [False, False, False]
     
-        forwardPos = game.snakePos[0] + game.snakeDirection
-        rightPos = game.snakePos[0] + self.LocalDirtoGameDir(1)
-        leftPos = game.snakePos[0] + self.LocalDirtoGameDir(2)
-        
         # Convert to Point
-        forwardPos = Point(forwardPos[0], forwardPos[1])
-        rightPos = Point(rightPos[0], rightPos[1])
-        leftPos = Point(leftPos[0], leftPos[1])
+        forwardPos = Point(game.snakePos[0].x + game.snakeDirection.x, game.snakePos[0].y + game.snakeDirection.y)
+        rightPos = Point(game.snakePos[0].x + self.LocalDirtoGameDir(1).x, game.snakePos[0].y + self.LocalDirtoGameDir(1).y)
+        leftPos = Point(game.snakePos[0].x + self.LocalDirtoGameDir(2).x, game.snakePos[0].y + self.LocalDirtoGameDir(2).y)
         
         # Borders
         if (forwardPos.x < 0 or forwardPos.x > game.cols or forwardPos.y < 0 or forwardPos.y > game.rows): self.dangerDir[0] = True
         if (rightPos.x < 0 or rightPos.x > game.cols or rightPos.y < 0 or rightPos.y > game.rows): self.dangerDir[1] = True
         if (leftPos.x < 0 or leftPos.x > game.cols or leftPos.y < 0 or leftPos.y > game.rows): self.dangerDir[2] = True
-        
+            
         # Snake
         for i in range(len(game.snakePos)):
             if forwardPos == game.snakePos[i]: self.dangerDir[0] = True
