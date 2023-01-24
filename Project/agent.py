@@ -32,7 +32,7 @@ class Agent:
         self.setSnakeMovementInput(action)
         self.game.GameStep()
         self.game.GameLoopStep()
-        return self.ai.reward, self.ai.gameWasReset, self.ai.score
+        return self.ai.stepReward, self.ai.gameWasReset, self.ai.score
     
     def setSnakeMovementInput(self, action):
         self.game.movementInput = [False, False, False, False]
@@ -47,14 +47,14 @@ class Agent:
             (self.ai.dangerDir[0]), # Danger straight
             (self.ai.dangerDir[1]), # Danger right
             (self.ai.dangerDir[2]), # Danger left
-            (self.game.snakeDirection == snake_game.Point(0, 1)), # Moving Up
-            (self.game.snakeDirection == snake_game.Point(0, -1)), # Moving Down
             (self.game.snakeDirection == snake_game.Point(-1, 0)), # Moving Left
             (self.game.snakeDirection == snake_game.Point(1, 0)), # Moving Right
-            (self.ai.foodDir[0]), # Food Up
+            (self.game.snakeDirection == snake_game.Point(0, 1)), # Moving Up
+            (self.game.snakeDirection == snake_game.Point(0, -1)), # Moving Down
             (self.ai.foodDir[1]), # Food Left
+            (self.ai.foodDir[3]), # Food Right
+            (self.ai.foodDir[0]), # Food Up
             (self.ai.foodDir[2]), # Food Down
-            (self.ai.foodDir[3]) # Food Right
         ]
         
         return np.array(state, dtype=int)
@@ -87,7 +87,7 @@ class Agent:
             prediciton = self.model(state0)
             move = torch.argmax(prediciton).item()
             finalMove[move] = 1
-        
+            
         return finalMove
     
 def train():
@@ -107,7 +107,7 @@ def train():
     snake_game.ai = ai
     
     while game.running:
-        #time.sleep(0.0033)
+        time.sleep(0.01)
         
         # get old state
         stateOld = agent.getState()
@@ -118,7 +118,7 @@ def train():
         # Perform move and get new state
         reward, done, score = agent.playStep(finalMove)
         stateNew = agent.getState()
-        
+        print(reward, done, score)
         agent.trainShortMemory(stateOld, finalMove, reward, stateNew, done)
         
         # Remember
@@ -132,7 +132,7 @@ def train():
                 recordScore = score
                 agent.model.save()
             
-            print('Game', agent.numGames, 'Score', score, 'Record', recordScore, 'Reward', ai.reward)
+            print('Game', agent.numGames, 'Score', score, 'Record', recordScore)
             
             snake_game.ai.Reset()
             

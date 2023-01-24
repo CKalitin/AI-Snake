@@ -45,6 +45,7 @@ class SnakeGame:
         self.playerControlled = playerControlled
         
         self.ResetGame()
+        self.ResetSnake()
         
         if self.playerControlled: self.GameLoop()
             
@@ -55,6 +56,8 @@ class SnakeGame:
         pygame.draw.rect(self.screen, self.foodColor, pygame.Rect(self.foodPos.x * self.cellWidth, self.foodPos.y * self.cellHeight, self.cellWidth, self.cellHeight))
         
     def GameStep(self):
+        if ai: ai.stepReward = 0
+        
         self.RotateSnake()
         self.MoveSnake()
         
@@ -89,14 +92,17 @@ class SnakeGame:
         
 
     def ResetGame(self):
-        if (ai): ai.GameReset()
+        if ai: ai.GameReset()
+        print('reset')
+        if self.playerControlled: self.ResetSnake()
+        self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
+        self.stepsSinceReset = 0
         
+    def ResetSnake(self):
         self.snakePos = [ Point(random.randrange(0, self.cols), random.randrange(0, self.rows)) ]
         self.snakePos.append(Point(self.snakePos[0].x - 1, self.snakePos[0].y))
         self.snakePos.append(Point(self.snakePos[0].x - 2, self.snakePos[0].y))
-        self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
         self.snakeDirection = Point(1, 0)
-        self.stepsSinceReset = 0
         
     def HandlePygameEvents(self):
         if self.playerControlled: self.movementInput = [False, False, False, False]
@@ -118,7 +124,7 @@ class SnakeGame:
         if self.movementInput[2]: self.snakeDirection = Point(0, 1)
         if self.movementInput[3]: self.snakeDirection = Point(1, 0)
         
-        if len(self.snakePos) > 1 and (self.snakePos[0].x + self.snakeDirection.x, self.snakePos[0].y + self.snakeDirection.y) == self.snakePos[1]:
+        if len(self.snakePos) > 1 and Point(self.snakePos[0].x + self.snakeDirection.x, self.snakePos[0].y + self.snakeDirection.y) == self.snakePos[1]:
             self.snakeDirection = previousDirection
 
     def MoveSnake(self):
@@ -177,7 +183,7 @@ class SnakeGame:
             self.movementInput = [False, False, False, True]
 
 class SnakeAI:
-    reward = 0
+    stepReward = 0
     score = 0
     gameWasReset = False
     
@@ -185,7 +191,6 @@ class SnakeAI:
     dangerDir = [False, False, False] # Forward, Right, Left
     
     def Reset(self):
-        self.reward = 0
         self.score = 0
         self.gameWasReset = False
     
@@ -193,7 +198,7 @@ class SnakeAI:
         # If snake has done nothing for 100 game steps
         if game.stepsSinceReset > 100*len(game.snakePos):
             game.ResetGame()
-
+        
         if len(game.snakePos) > 3:
             self.score = len(game.snakePos) - 3
 
@@ -201,11 +206,11 @@ class SnakeAI:
         self.GetFoodDirection()
             
     def GameReset(self):
-        self.reward -= 10
+        self.stepReward = -10
         self.gameWasReset = True
         
     def FoodEaten(self):
-        self.reward += 15
+        self.stepReward = 10
         
     def GetDangerDirection(self):
         self.dangerDir = [False, False, False]
@@ -219,12 +224,14 @@ class SnakeAI:
         if (forwardPos.x < 0 or forwardPos.x > game.cols or forwardPos.y < 0 or forwardPos.y > game.rows): self.dangerDir[0] = True
         if (rightPos.x < 0 or rightPos.x > game.cols or rightPos.y < 0 or rightPos.y > game.rows): self.dangerDir[1] = True
         if (leftPos.x < 0 or leftPos.x > game.cols or leftPos.y < 0 or leftPos.y > game.rows): self.dangerDir[2] = True
-            
+        
         # Snake
         for i in range(len(game.snakePos)):
             if forwardPos == game.snakePos[i]: self.dangerDir[0] = True
             if rightPos == game.snakePos[i]: self.dangerDir[1] = True
             if leftPos == game.snakePos[i]: self.dangerDir[2] = True
+        
+        if self.gameWasReset: game.ResetSnake()
         
     def GetFoodDirection(self):
         self.foodDir = [False, False, False, False]
