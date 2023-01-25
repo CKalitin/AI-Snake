@@ -48,7 +48,7 @@ class SnakeGame:
         self.ResetSnake()
         
         if self.playerControlled: self.GameLoop()
-            
+     
     def RenderCells(self):
         for i in range(len(self.snakePos)):
             pygame.draw.rect(self.screen, self.snakeColor, pygame.Rect(self.snakePos[i].x * self.cellWidth, self.snakePos[i].y * self.cellHeight, self.cellWidth, self.cellHeight))
@@ -93,7 +93,6 @@ class SnakeGame:
 
     def ResetGame(self):
         if ai: ai.GameReset()
-        print('reset')
         if self.playerControlled: self.ResetSnake()
         self.foodPos = Point(random.randint(0, self.cols), random.randint(0, self.rows))
         self.stepsSinceReset = 0
@@ -189,6 +188,8 @@ class SnakeAI:
     
     foodDir = [False, False, False, False] # Up, Left, Down, Right / WASD
     dangerDir = [False, False, False] # Forward, Right, Left
+    snakeDir = [False, False, False, False] # If snake is Up, Left, Down, Right
+    snakeDirLen = 0
     
     def Reset(self):
         self.score = 0
@@ -204,6 +205,10 @@ class SnakeAI:
 
         self.GetDangerDirection()
         self.GetFoodDirection()
+        self.GetSnakeDirection()
+        
+        if self.snakeDirLen > 2: self.stepReward -= 1
+        if self.snakeDirLen > 3: self.stepReward -= 3
             
     def GameReset(self):
         self.stepReward = -10
@@ -240,6 +245,27 @@ class SnakeAI:
         self.foodDir[1] = game.foodPos.x < game.snakePos[0].x
         self.foodDir[2] = game.foodPos.y < game.snakePos[0].y
         self.foodDir[3] = game.foodPos.x > game.snakePos[0].x
+    
+    def GetSnakeDirection(self):
+        self.snakeDir = [False, False, False, False] 
+        
+        positions = []
+        for x in range(game.cols + 1):
+            positions.append(Point(x, game.snakePos[0].y))
+        for y in range(game.rows + 1):
+            positions.append(Point(game.snakePos[0].x, y))
+        
+        for point in positions:
+            for snakePoint in game.snakePos:
+                if point == snakePoint and point != game.snakePos[0]:
+                    if point.y > game.snakePos[0].y: self.snakeDir[0] = True
+                    if point.x < game.snakePos[0].x: self.snakeDir[1] = True
+                    if point.y < game.snakePos[0].y: self.snakeDir[2] = True
+                    if point.x > game.snakePos[0].x: self.snakeDir[3] = True
+                    
+        self.snakeDirLen = 0
+        for snakeDir in self.snakeDir:
+            if snakeDir: self.snakeDirLen += 1
     
     def LocalDirtoGameDir(self, localDir):
         # Local Direction (Forward, Right, Left) to Game Direction

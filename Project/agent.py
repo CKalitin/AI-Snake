@@ -25,7 +25,7 @@ class Agent:
         self.epsilon = 0 # Randomness
         self.gamma = 0.9 # Discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft() on max memory
-        self.model = model.Linear_QNET(11, 256, 3)
+        self.model = model.Linear_QNET(15, 256, 3)
         self.trainer = model.QTrainer(self.model, lr=LR, gamma=self.gamma)
     
     def playStep(self, action):
@@ -55,6 +55,10 @@ class Agent:
             (self.ai.foodDir[3]), # Food Right
             (self.ai.foodDir[0]), # Food Up
             (self.ai.foodDir[2]), # Food Down
+            (self.ai.snakeDir[1]), # Snake Left
+            (self.ai.snakeDir[3]), # Snake Right
+            (self.ai.snakeDir[0]), # Snake Up
+            (self.ai.snakeDir[2]), # Snake Down
         ]
         
         return np.array(state, dtype=int)
@@ -107,7 +111,7 @@ def train():
     snake_game.ai = ai
     
     while game.running:
-        time.sleep(0.01)
+        #time.sleep(0.0033)
         
         # get old state
         stateOld = agent.getState()
@@ -118,7 +122,7 @@ def train():
         # Perform move and get new state
         reward, done, score = agent.playStep(finalMove)
         stateNew = agent.getState()
-        print(reward, done, score)
+        
         agent.trainShortMemory(stateOld, finalMove, reward, stateNew, done)
         
         # Remember
@@ -141,7 +145,7 @@ def train():
             meanScore = totalScore / agent.numGames
             plotMeanScores.append(meanScore)
             plot(plotScores, plotMeanScores)
-            
-            
+
+
 if __name__ == '__main__':
     train()
