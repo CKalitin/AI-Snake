@@ -19,7 +19,7 @@ class SnakeGame:
 
     movementInput = [False, False, False, False] # WASD
 
-    rows, cols = (20, 20)
+    rows, cols = (25, 25)
 
     cellWidth = 16
     cellHeight = 16
@@ -74,7 +74,7 @@ class SnakeGame:
 
     def GameLoopStep(self):
         self.HandlePygameEvents()
-            
+        
         self.screen.fill((0, 0, 0))
         
         self.RenderCells()
@@ -191,13 +191,15 @@ class SnakeAI:
     snakeDir = [False, False, False, False] # If snake is Up, Left, Down, Right
     snakeDirLen = 0
     
+    dirs = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+    
     def Reset(self):
         self.score = 0
         self.gameWasReset = False
     
     def GameStep(self):
         # If snake has done nothing for 100 game steps
-        if game.stepsSinceReset > 100*len(game.snakePos):
+        if game.stepsSinceReset > (game.cols*3)*len(game.snakePos):
             game.ResetGame()
         
         if len(game.snakePos) > 3:
@@ -206,6 +208,7 @@ class SnakeAI:
         self.GetDangerDirection()
         self.GetFoodDirection()
         self.GetSnakeDirection()
+        self.GetEightDirections()
         
         if self.snakeDirLen > 2: self.stepReward -= 1
         if self.snakeDirLen > 3: self.stepReward -= 3
@@ -237,7 +240,50 @@ class SnakeAI:
             if leftPos == game.snakePos[i]: self.dangerDir[2] = True
         
         if self.gameWasReset: game.ResetSnake()
+    
+    def GetEightDirections(self):
+        dirs = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
         
+        for i in range(game.rows):
+            if game.foodPos == Point(game.snakePos[0].x, i):
+                if i > game.snakePos[0].y: dirs[8] = True
+                else: dirs[12] = True
+            if self.CheckSnakeAtPos(game.snakePos[0].x, i) and i != game.snakePos[0].y:
+                if i > game.snakePos[0].y: dirs[0] = True
+                else: dirs[4] = True
+                
+        for i in range(game.cols):
+            if game.foodPos == Point(i, game.snakePos[0].y):
+                if i > game.snakePos[0].x: dirs[10] = True
+                else: dirs[14] = True
+            if self.CheckSnakeAtPos(i, game.snakePos[0].y) and i != game.snakePos[0].x:
+                if i > game.snakePos[0].x: dirs[2] = True
+                else: dirs[6] = True
+                
+        for i in range(game.rows):
+            if game.foodPos == Point(i, i):
+                if i > game.snakePos.y: dirs[9] = True
+                else: dirs[13] = True
+            if self.CheckSnakeAtPos(i, i) and i != game.snakePos[0].x and i != game.snakePos[0].y:
+                if i > game.snakePos[0].y: dirs[1] = True
+                else: dirs[5] = True
+                
+        for i in range(game.rows):
+            if game.foodPos == Point(i, 25 - 1):
+                if i > game.snakePos.y: dirs[11] = True
+                else: dirs[15] = True
+            if self.CheckSnakeAtPos(i, 25 - i) and i != game.snakePos[0].x and 25 - i != game.snakePos[0].y:
+                if i > game.snakePos.y: dirs[3] = True
+                else: dirs[7] = True
+                
+        print(dirs)
+    
+    def CheckSnakeAtPos(self, pos):
+        for snakePos in range(len(game.snakePos)):
+            if snakePos == pos:
+                return True
+        return False
+    
     def GetFoodDirection(self):
         self.foodDir = [False, False, False, False]
         
