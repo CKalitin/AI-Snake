@@ -1,6 +1,7 @@
 from collections import namedtuple
 import pygame
 import random
+import time
 
 Point = namedtuple('Point', 'x, y')
 
@@ -25,6 +26,7 @@ class SnakeGame:
     cellHeight = 16
 
     snakeColor = (0, 255, 50)
+    snakeHeadColor = (0, 165, 10)
     foodColor = (255, 50, 0)
 
     snakePos = Point(0,0)
@@ -52,6 +54,7 @@ class SnakeGame:
     def RenderCells(self):
         for i in range(len(self.snakePos)):
             pygame.draw.rect(self.screen, self.snakeColor, pygame.Rect(self.snakePos[i].x * self.cellWidth, self.snakePos[i].y * self.cellHeight, self.cellWidth, self.cellHeight))
+        pygame.draw.rect(self.screen, self.snakeHeadColor, pygame.Rect(self.snakePos[0].x * self.cellWidth, self.snakePos[0].y * self.cellHeight, self.cellWidth, self.cellHeight))
         
         pygame.draw.rect(self.screen, self.foodColor, pygame.Rect(self.foodPos.x * self.cellWidth, self.foodPos.y * self.cellHeight, self.cellWidth, self.cellHeight))
         
@@ -143,6 +146,7 @@ class SnakeGame:
 
         for i in range(len(self.snakePos)):
             if i != 0 and i < len(self.snakePos) and self.snakePos[0] == self.snakePos[i]:
+                #if ai.score > 15: time.sleep(3) # Pause on death
                 self.ResetGame()
                 
     def HandleFoodCollisions(self):
@@ -191,7 +195,8 @@ class SnakeAI:
     snakeDir = [False, False, False, False] # If snake is Up, Left, Down, Right
     snakeDirLen = 0
     
-    dirs = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+    eightDirs = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+    # Clockwise from y=1, First 8 are snake, Second 8 are food in that direction
     
     def Reset(self):
         self.score = 0
@@ -248,7 +253,7 @@ class SnakeAI:
             if game.foodPos == Point(game.snakePos[0].x, i):
                 if i > game.snakePos[0].y: dirs[8] = True
                 else: dirs[12] = True
-            if self.CheckSnakeAtPos(game.snakePos[0].x, i) and i != game.snakePos[0].y:
+            if self.CheckSnakeAtPos(Point(game.snakePos[0].x, i)) and i != game.snakePos[0].y:
                 if i > game.snakePos[0].y: dirs[0] = True
                 else: dirs[4] = True
                 
@@ -256,30 +261,32 @@ class SnakeAI:
             if game.foodPos == Point(i, game.snakePos[0].y):
                 if i > game.snakePos[0].x: dirs[10] = True
                 else: dirs[14] = True
-            if self.CheckSnakeAtPos(i, game.snakePos[0].y) and i != game.snakePos[0].x:
+            if self.CheckSnakeAtPos(Point(i, game.snakePos[0].y)) and i != game.snakePos[0].x:
                 if i > game.snakePos[0].x: dirs[2] = True
                 else: dirs[6] = True
                 
-        for i in range(game.rows):
-            if game.foodPos == Point(i, i):
-                if i > game.snakePos.y: dirs[9] = True
+        for i in range(game.rows * 2):
+            pos = Point(game.snakePos[0].x - game.rows + i, game.snakePos[0].y - game.rows + i)
+            if game.foodPos == pos:
+                if i > game.snakePos[0].y: dirs[9] = True
                 else: dirs[13] = True
-            if self.CheckSnakeAtPos(i, i) and i != game.snakePos[0].x and i != game.snakePos[0].y:
+            if self.CheckSnakeAtPos(pos) and pos != game.snakePos[0]:
                 if i > game.snakePos[0].y: dirs[1] = True
                 else: dirs[5] = True
                 
-        for i in range(game.rows):
-            if game.foodPos == Point(i, 25 - 1):
-                if i > game.snakePos.y: dirs[11] = True
+        for i in range(game.rows * 2):
+            pos = Point(game.snakePos[0].x + game.rows - i, game.snakePos[0].y - game.rows + i)
+            if game.foodPos == pos:
+                if i > game.snakePos[0].y: dirs[11] = True
                 else: dirs[15] = True
-            if self.CheckSnakeAtPos(i, 25 - i) and i != game.snakePos[0].x and 25 - i != game.snakePos[0].y:
-                if i > game.snakePos.y: dirs[3] = True
+            if self.CheckSnakeAtPos(pos) and pos != game.snakePos[0]:
+                if i > game.snakePos[0].y: dirs[3] = True
                 else: dirs[7] = True
                 
-        print(dirs)
+        self.eightDirs = dirs
     
     def CheckSnakeAtPos(self, pos):
-        for snakePos in range(len(game.snakePos)):
+        for snakePos in game.snakePos:
             if snakePos == pos:
                 return True
         return False

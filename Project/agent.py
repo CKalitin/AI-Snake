@@ -20,12 +20,15 @@ class Agent:
     game = None
     ai = None
     
+    stateType = 0 # Input state to model
+    
     def __init__(self):
         self.numGames = 0
         self.epsilon = 0 # Randomness
         self.gamma = 0.9 # Discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft() on max memory
-        self.model = model.Linear_QNET(15, 256, 3)
+        if self.stateType == 0: self.model = model.Linear_QNET(15, 256, 3)
+        if self.stateType == 1: self.model = model.Linear_QNET(23, 256, 3)
         self.trainer = model.QTrainer(self.model, lr=LR, gamma=self.gamma)
     
     def playStep(self, action):
@@ -43,24 +46,40 @@ class Agent:
         if movementInput == Point(1, 0): self.game.movementInput[3] = True
     
     def getState(self):
-        state = [
-            (self.ai.dangerDir[0]), # Danger straight
-            (self.ai.dangerDir[1]), # Danger right
-            (self.ai.dangerDir[2]), # Danger left
-            (self.game.snakeDirection == snake_game.Point(-1, 0)), # Moving Left
-            (self.game.snakeDirection == snake_game.Point(1, 0)), # Moving Right
-            (self.game.snakeDirection == snake_game.Point(0, 1)), # Moving Up
-            (self.game.snakeDirection == snake_game.Point(0, -1)), # Moving Down
-            (self.ai.foodDir[1]), # Food Left
-            (self.ai.foodDir[3]), # Food Right
-            (self.ai.foodDir[0]), # Food Up
-            (self.ai.foodDir[2]), # Food Down
-            (self.ai.snakeDir[1]), # Snake Left
-            (self.ai.snakeDir[3]), # Snake Right
-            (self.ai.snakeDir[0]), # Snake Up
-            (self.ai.snakeDir[2]), # Snake Down
-        ]
+        state = []
+        if self.stateType == 0:
+            # 15 Parameters
+            state = [
+                (self.ai.dangerDir[0]), # Danger straight
+                (self.ai.dangerDir[1]), # Danger right
+                (self.ai.dangerDir[2]), # Danger left
+                (self.game.snakeDirection == snake_game.Point(-1, 0)), # Moving Left
+                (self.game.snakeDirection == snake_game.Point(1, 0)), # Moving Right
+                (self.game.snakeDirection == snake_game.Point(0, 1)), # Moving Up
+                (self.game.snakeDirection == snake_game.Point(0, -1)), # Moving Down
+                (self.ai.foodDir[1]), # Food Left
+                (self.ai.foodDir[3]), # Food Right
+                (self.ai.foodDir[0]), # Food Up
+                (self.ai.foodDir[2]), # Food Down
+                (self.ai.snakeDir[1]), # Snake Left
+                (self.ai.snakeDir[3]), # Snake Right
+                (self.ai.snakeDir[0]), # Snake Up
+                (self.ai.snakeDir[2]), # Snake Down
+            ]
+        elif self.stateType == 1:
+            # 23 Parameters
+            state = self.ai.eightDirs[:] # 16 bools, [:] copies with reference to original
+            state += [
+                (self.game.snakeDirection == snake_game.Point(0, 1)), # Moving Up
+                (self.game.snakeDirection == snake_game.Point(1, 0)), # Moving Right
+                (self.game.snakeDirection == snake_game.Point(0, -1)), # Moving Down
+                (self.game.snakeDirection == snake_game.Point(-1, 0)), # Moving Left
+                (self.ai.dangerDir[0]), # Danger straight
+                (self.ai.dangerDir[1]), # Danger right
+                (self.ai.dangerDir[2]) # Danger left
+            ]
         
+        print(state)
         return np.array(state, dtype=int)
     
     def remember(self, state, action, reward, nextState, done):
@@ -80,10 +99,10 @@ class Agent:
     def getAction(self, state):
         # Random moves (Tradeoff between exploration / exploitation)
         # Chance of random move starts at 40%, then goes to 0 over 80 moves. Because of (0, 200 < 80)
-        self.epsilon = 80 - self.numGames
+        self.epsilon = 120 - self.numGames
         finalMove = [0,0,0]
         
-        if (random.randint(0, 200) < self.epsilon):
+        if (random.randint(0, 300) < self.epsilon):
             move = random.randint(0, 2)
             finalMove[move] = 1
         else:
@@ -111,8 +130,9 @@ def train():
     snake_game.ai = ai
     
     while game.running:
-        #time.sleep(0.0033)
+        #time.sleep(0.1)
         
+                
         # get old state
         stateOld = agent.getState()
         
@@ -122,7 +142,7 @@ def train():
         # Perform move and get new state
         reward, done, score = agent.playStep(finalMove)
         stateNew = agent.getState()
-        
+            
         agent.trainShortMemory(stateOld, finalMove, reward, stateNew, done)
         
         # Remember
@@ -137,7 +157,7 @@ def train():
                 agent.model.save()
             
             print('Game', agent.numGames, 'Score', score, 'Record', recordScore)
-            
+                
             snake_game.ai.Reset()
             
             plotScores.append(score)
