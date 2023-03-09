@@ -20,7 +20,7 @@ class Agent:
     game = None
     ai = None
     
-    stateType = 0 # Input state to model
+    stateType = 1 # Input state to model
     
     def __init__(self):
         self.numGames = 0
@@ -79,7 +79,6 @@ class Agent:
                 (self.ai.dangerDir[2]) # Danger left
             ]
         
-        print(state)
         return np.array(state, dtype=int)
     
     def remember(self, state, action, reward, nextState, done):

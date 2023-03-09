@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import os
+import numpy as np
 
 # https://github.com/patrickloeber/snake-ai-pytorch
 
@@ -32,8 +33,19 @@ class QTrainer:
         self.lr = lr
         self.gamma = gamma
         self.optimizer = optim.Adam(model.parameters(), lr=self.lr)
+        print("Paramters: ", self.get_n_params(model))
         self.criterion = nn.MSELoss()
-        
+    
+    # https://discuss.pytorch.org/t/how-do-i-check-the-number-of-parameters-of-a-model/4325/6
+    def get_n_params(self, model):
+        pp=0
+        for p in list(model.parameters()):
+            nn=1
+            for s in list(p.size()):
+                nn = nn*s
+            pp += nn
+        return pp
+
     def trainStep(self, state, action, reward, nextState, done):
         state = torch.tensor(state, dtype=torch.float)
         nextState = torch.tensor(nextState, dtype=torch.float)
