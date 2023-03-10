@@ -190,6 +190,8 @@ class SnakeAI:
     score = 0
     gameWasReset = False
     
+    previousDirsWithSnake = 0
+    
     foodDir = [False, False, False, False] # Up, Left, Down, Right / WASD
     dangerDir = [False, False, False] # Forward, Right, Left
     snakeDir = [False, False, False, False] # If snake is Up, Left, Down, Right
@@ -217,6 +219,16 @@ class SnakeAI:
         
         if self.snakeDirLen > 2: self.stepReward -= 1
         if self.snakeDirLen > 3: self.stepReward -= 3
+        
+        directionsWithSnake = 0 # How many directions are there with a piece of the snake's body
+        for i in range(len(self.eightDirs)):
+            if i < 8 and self.eightDirs[i] == True:
+                directionsWithSnake += 1
+        
+        if directionsWithSnake > 6 and directionsWithSnake < self.previousDirsWithSnake:
+            self.stepReward += 1
+        if directionsWithSnake > 6 and directionsWithSnake > self.previousDirsWithSnake:
+            self.stepReward -= 1
             
     def GameReset(self):
         self.stepReward = -10
